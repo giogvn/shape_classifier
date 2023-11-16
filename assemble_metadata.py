@@ -167,7 +167,7 @@ def assemble_metadata(
                     found_img = True
                     date = get_image_creation_date(img_path)
                     obj_id, img_view, background, indoor = get_img_metadata(
-                        str(img_path)
+                        str(img_path.name)
                     )
                     data["img_path"].append(img_path)
                     data["date"].append(date)
