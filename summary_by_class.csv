@@ -1,0 +1,6 @@
+class_name,Number of Images,Dataset Size,Image's Resolutions,background
+book,18,9.968342781066895 MB,"(4618x 3464),(2598x 3464)","dark,light"
+coin,13,6.618133544921875 MB,"(4618x 3464),(2576x 1932)","dark,light"
+mug,18,6.484602928161621 MB,"(4618x 3464),(2598x 3464)","light,dark"
+pen,18,6.519474029541016 MB,"(2598x 3464),(4618x 3464)","dark,light"
+tooth_brush,18,12.946080207824707 MB,"(4618x 3464),(2598x 3464)","light,dark"

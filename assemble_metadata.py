@@ -4,15 +4,16 @@ import pandas as pd
 from PIL import Image
 from datetime import datetime
 
-METADATA_HEADER = [
-    "img_path",
-    "date",
-    "class_name",
-    "obj_id",
-    "background",
-    "img_view",
-    "indoor",
-]
+
+CLASS_NAME = "class_name"
+OBJ_ID = "obj_id"
+BACKGROUND = "background"
+DATE = "date"
+IMG_PATH = "img_path"
+IMG_VIEW = "img_view"
+INDOOR = "indoor"
+
+METADATA_HEADER = [CLASS_NAME, IMG_PATH, OBJ_ID, BACKGROUND, DATE, IMG_VIEW, INDOOR]
 ACCEPTED_IMG_VIEWS = [
     "front",
     "back",

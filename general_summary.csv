@@ -1,0 +1,10 @@
+Description,Value
+Number of classes,5
+Number of Images,85
+Dataset Size,42.53663349151611 MB
+Image's Resolutions,"(4618x 3464),(2598x 3464),(2576x 1932)"
+Class tooth_brush,18
+Class mug,18
+Class coin,13
+Class pen,18
+Class book,18
