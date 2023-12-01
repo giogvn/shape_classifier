@@ -86,12 +86,15 @@ class ImageProcessor:
         return Image.fromarray(out.astype("uint8"), "L"), img_name
 
     def exp_transform(self, img_path: str) -> Image:
+        print(f"Transforming image {img_path} with the exponential")
         exp_T = np.vectorize(lambda pixel: np.exp(pixel))
         img = Image.open(img_path)
         img = self._to_grayscale(img)
-        c = 255 / (np.log(1 + np.exp(img)))
-        out = c * exp_T(img)
-        print(f"Transforming image {img_path} with the exponential")
+        img = np.array(img, dtype="float64")
+        img /= 255.0
+        out = exp_T(img) - 1
+        out /= np.max(out)
+        out *= 255
         img_name = img_path.name.split(".")[0] + "_exp_transform" + img_path.suffix
         return Image.fromarray(out.astype("uint8"), "L"), img_name
 
@@ -127,10 +130,10 @@ class ImageProcessor:
 if __name__ == "__main__":
     base_path = "imgs_dataset"
     img_processor = ImageProcessor(base_path)
-    # img_processor.apply_filter_to_multiple_images(filter=img_processor.mean_filter)
+    """img_processor.apply_filter_to_multiple_images(filter=img_processor.mean_filter)
     img_processor.apply_filter_to_multiple_images(
         filter=img_processor.gray_gradient_transform
     )
+    img_processor.apply_filter_to_multiple_images(filter=img_processor.log_transform)"""
 
-    img_processor.apply_filter_to_multiple_images(filter=img_processor.log_transform)
     img_processor.apply_filter_to_multiple_images(filter=img_processor.exp_transform)
