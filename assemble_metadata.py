@@ -1,8 +1,8 @@
-import os
 from pathlib import Path
 import pandas as pd
 from PIL import Image
 from datetime import datetime
+import warnings
 
 
 CLASS_NAME = "class_name"
@@ -11,9 +11,19 @@ BACKGROUND = "background"
 DATE = "date"
 IMG_PATH = "img_path"
 IMG_VIEW = "img_view"
+IMG_TRANSFORM = "img_transformation"
 INDOOR = "indoor"
 
-METADATA_HEADER = [CLASS_NAME, IMG_PATH, OBJ_ID, BACKGROUND, DATE, IMG_VIEW, INDOOR]
+METADATA_HEADER = [
+    CLASS_NAME,
+    IMG_PATH,
+    OBJ_ID,
+    BACKGROUND,
+    DATE,
+    IMG_VIEW,
+    IMG_TRANSFORM,
+    INDOOR,
+]
 ACCEPTED_IMG_VIEWS = [
     "front",
     "back",
@@ -24,6 +34,12 @@ ACCEPTED_IMG_VIEWS = [
     "open_out",
     "open_inside_isometric",
     "open_outside_isometric",
+]
+ACCEPTED_IMG_TRANSFORATIONS = [
+    "exp",
+    "gray_gradient",
+    "log",
+    "mean_filter",
 ]
 INDOOR = True
 ACCEPTED_IMG_BACKGROUNDS = ["dark", "light"]
@@ -69,32 +85,31 @@ def get_image_creation_date(img_path: Path) -> str:
 
     Raises:
         CouldNotGetFileMetadataError: if the image metadata could not be retrieved"""
-    try:
-        with Image.open(img_path) as img:
+    with Image.open(img_path) as img:
+        try:
             creation_date = img._getexif().get(
                 36867
             )  # 36867 corresponds to DateTimeOriginal in EXIF data
+            creation_date = datetime.strptime(creation_date, "%Y:%m:%d %H:%M:%S")
+        except:
+            warnings.warn(
+                "Could not get the image creation date. Using the current date instead",
+                category=Warning,
+            )
+            creation_date = datetime.now().strftime("%Y:%m:%d %H:%M:%S")
 
-            if creation_date:
-                creation_date = datetime.strptime(creation_date, "%Y:%m:%d %H:%M:%S")
-                return creation_date.strftime("%Y-%m-%d %H:%M:%S")
-            else:
-                raise CouldNotGetFileMetadataError(
-                    f"Could not get metadata from {img_path}"
-                )
-
-    except CouldNotGetFileMetadataError as e:
-        print("Error:", e)
-        return None
+        return creation_date
 
 
-def get_img_metadata(img_path_name: str) -> tuple[str, str, str, str, bool]:
+def get_img_metadata(img_path_name: str) -> tuple[str, str, str, str, str, bool]:
     """Returns the metadata of an image.
     Args:
         img_path_name (str): the img file name.
+
     Returns:
-    tuple[str, str, str, bool]: A tuple containing the image's object id, image view,
-    background and indoor information of an image.
+        tuple[str, str, str, str, str, bool]: A tuple containing the image's
+        object id, image view, image transformation background and indoor
+        information of an image.
 
     Raises:
         InvalidImageNameError: if the img_path name does not have the expected format:
@@ -114,12 +129,22 @@ def get_img_metadata(img_path_name: str) -> tuple[str, str, str, str, bool]:
         background = "dark"
 
     obj_id = metadata[0]
-    img_view = metadata[1].split(".")[0][:-2]
+    img_view = None
+    for view in ACCEPTED_IMG_VIEWS:
+        if view in metadata[1]:
+            img_view = view
+            break
 
-    if img_view not in ACCEPTED_IMG_VIEWS:
+    img_transform = "original"
+    for transform in ACCEPTED_IMG_TRANSFORATIONS:
+        if transform in metadata[1]:
+            img_transform = transform
+            break
+
+    if not img_view:
         raise InvalidImageNameError(INVALID_IMG_NAME_ERROR)
 
-    return obj_id, img_view, background, INDOOR
+    return obj_id, img_view, img_transform, background, INDOOR
 
 
 def assemble_metadata(
@@ -167,15 +192,20 @@ def assemble_metadata(
                     print(img_path)
                     found_img = True
                     date = get_image_creation_date(img_path)
-                    obj_id, img_view, background, indoor = get_img_metadata(
-                        str(img_path.name)
-                    )
+                    (
+                        obj_id,
+                        img_view,
+                        img_transform,
+                        background,
+                        indoor,
+                    ) = get_img_metadata(str(img_path.name))
                     data["img_path"].append(img_path)
                     data["date"].append(date)
                     data["class_name"].append(path.name)
                     data["obj_id"].append(obj_id)
                     data["background"].append(background)
                     data["img_view"].append(img_view)
+                    data["img_transformation"].append(img_transform)
                     data["indoor"].append(indoor)
 
     if not found_img:
@@ -187,4 +217,5 @@ def assemble_metadata(
     df.to_csv(out, index=False)
 
 
-assemble_metadata(Path("imgs_dataset"))
+if __name__ == "__main__":
+    assemble_metadata(Path("full_dataset"), out="full_dataset_metadata.csv")

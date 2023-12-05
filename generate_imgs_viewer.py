@@ -1,27 +1,30 @@
 from PIL import Image
-import os
 from pathlib import Path
 import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+from assemble_metadata import IMG_PATH, CLASS_NAME, IMG_TRANSFORM
 
-from assemble_metadata import IMG_PATH, CLASS_NAME
 
-
-def create_dataset_view(metadata_path: Path, cell_width: int, cell_height: int):
+def create_dataset_view(
+    df: pd.DataFrame,
+    cell_width: int,
+    cell_height: int,
+    class_name: str = CLASS_NAME,
+) -> Image:
     """Creates a view of the dataset
     Args:
         metadata_path (Path): the path to the metadata csv file.
     Returns:
-        None
+        img: a PIL Image object.
 
     Raises:
         InvalidPathError: if the metadata_path is not a csv file."""
-    df = pd.read_csv(metadata_path)
-    img_classes = df[CLASS_NAME].unique()
 
+    img_classes = df[class_name].unique()
     img_paths = []
     for img_class in img_classes:
         img_paths.extend(df[df[CLASS_NAME] == img_class][IMG_PATH].values)
-
     n_cols = 15
     n_rows = len(img_paths) // n_cols + (1 if len(img_paths) % n_cols != 0 else 0)
 
@@ -43,15 +46,17 @@ def create_dataset_view(metadata_path: Path, cell_width: int, cell_height: int):
         new_width = cell_width
         new_height = int(cell_width / prop)
         img = img.resize((new_width, new_height))
-
         full_img.paste(img, (x, y))
 
     return full_img
 
 
-cell_width = 100
-cell_height = 150
-
-imagem_resultante = create_dataset_view("metadata.csv", cell_width, cell_height)
-
-imagem_resultante.save("dataset_view.png")
+if __name__ == "__main__":
+    cell_width = 100
+    cell_height = 150
+    metadata_path = Path("full_dataset_metadata.csv")
+    df = pd.read_csv(metadata_path)
+    for transform in df[IMG_TRANSFORM].unique():
+        transf_df = df[df[IMG_TRANSFORM] == transform]
+        view = create_dataset_view(transf_df, cell_width, cell_height)
+        view.save(transform + "_transform_dataset_view.png")
