@@ -1,7 +1,9 @@
 from scipy.signal import convolve2d
 from PIL import Image
-import numpy as np
+from skimage import io, exposure
 from pathlib import Path
+import numpy as np
+import matplotlib.pyplot as plt
 import os
 
 
@@ -90,13 +92,22 @@ class ImageProcessor:
         exp_T = np.vectorize(lambda pixel: np.exp(pixel))
         img = Image.open(img_path)
         img = self._to_grayscale(img)
-        img = np.array(img, dtype="float64")
-        img /= 255.0
+        img = np.array(img, dtype="float64") / 255.0
         out = exp_T(img) - 1
         out /= np.max(out)
         out *= 255
         img_name = img_path.name.split(".")[0] + "_exp_transform" + img_path.suffix
         return Image.fromarray(out.astype("uint8"), "L"), img_name
+
+    def histogram_normalization(self, img_path: str) -> Image:
+        print(f"Applying the histogram normalization to the image {img_path}")
+        img = Image.open(img_path)
+        img = self._to_grayscale(img)
+        out = exposure.equalize_hist(np.array(img, dtype="float64"))
+        img_name = (
+            img_path.name.split(".")[0] + "_histogram_equalization" + img_path.suffix
+        )
+        return Image.fromarray((out * 255).astype("uint8"), "L"), img_name
 
     def apply_filter_to_multiple_images(
         self,
@@ -106,7 +117,6 @@ class ImageProcessor:
         """Applies a filter to multiple images in the object's base path"""
 
         ints = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-        found_img = False
         for path in self.base_path.iterdir():
             if path.is_dir():
                 for img_path in path.iterdir():
@@ -134,6 +144,9 @@ if __name__ == "__main__":
     img_processor.apply_filter_to_multiple_images(
         filter=img_processor.gray_gradient_transform
     )
-    img_processor.apply_filter_to_multiple_images(filter=img_processor.log_transform)"""
+    img_processor.apply_filter_to_multiple_images(filter=img_processor.log_transform)
 
-    img_processor.apply_filter_to_multiple_images(filter=img_processor.exp_transform)
+    img_processor.apply_filter_to_multiple_images(filter=img_processor.exp_transform)"""
+    img_processor.apply_filter_to_multiple_images(
+        filter=img_processor.histogram_normalization, output_dir="normalized_dataset"
+    )
