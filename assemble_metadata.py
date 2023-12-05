@@ -40,6 +40,7 @@ ACCEPTED_IMG_TRANSFORATIONS = [
     "gray_gradient",
     "log",
     "mean_filter",
+    "histogram_equalization",
 ]
 INDOOR = True
 ACCEPTED_IMG_BACKGROUNDS = ["dark", "light"]
