@@ -1,0 +1,45 @@
+{
+    "mug": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 9.0
+    },
+    "tooth_brush": {
+        "precision": 1.0,
+        "recall": 0.8888888888888888,
+        "f1-score": 0.9411764705882353,
+        "support": 9.0
+    },
+    "book": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 10.0
+    },
+    "coin": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 9.0
+    },
+    "pen": {
+        "precision": 0.9090909090909091,
+        "recall": 1.0,
+        "f1-score": 0.9523809523809523,
+        "support": 10.0
+    },
+    "accuracy": 0.9787234042553191,
+    "macro avg": {
+        "precision": 0.9818181818181818,
+        "recall": 0.9777777777777779,
+        "f1-score": 0.9787114845938376,
+        "support": 47.0
+    },
+    "weighted avg": {
+        "precision": 0.9806576402321083,
+        "recall": 0.9787234042553191,
+        "f1-score": 0.978604207640503,
+        "support": 47.0
+    }
+}
