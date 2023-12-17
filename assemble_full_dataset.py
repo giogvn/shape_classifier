@@ -41,10 +41,16 @@ def zip_folders(inputs: list) -> None:
 
 
 if __name__ == "__main__":
-    inputs = ["imgs_dataset", "transformed_imgs_dataset"]
+    inputs = [
+        "imgs_dataset",
+        "transformed_imgs_dataset",
+        "normalized_dataset",
+        "automatic_segmented_dataset",
+        "segmented_dataset",
+    ]
     output = "full_dataset"
-    """print(f"Assembling full dataset from {inputs}")
-    assemble_full_dataset(inputs, output)"""
+    print(f"Assembling full dataset from {inputs}")
+    assemble_full_dataset(inputs, output)
     inputs = [i for i in Path(output).iterdir() if i.is_dir()]
     print(f"Zipping {inputs}")
     zip_folders(inputs)

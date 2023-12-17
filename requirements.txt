@@ -48,4 +48,8 @@ tifffile==2023.9.26
 tornado==6.4
 traitlets==5.14.0
 tzdata==2023.3
+<<<<<<< HEAD
 wcwidth==0.2.12
+=======
+wcwidth==0.2.12
+>>>>>>> b7390f4cbb2087b649fe92c00211f76a458bc8ea
