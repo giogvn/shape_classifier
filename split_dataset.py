@@ -31,7 +31,7 @@ def split_dirs_dataset_in_test_train_sets(
 
 
 if __name__ == "__main__":
-    input_folder = "imgs_dataset"
+    input_folder = "full_dataset"
     output = "train_test_datasets"
     ratios = (0.8, 0.1, 0.1)
     print(
