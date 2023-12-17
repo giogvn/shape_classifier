@@ -1,16 +1,26 @@
 from scipy.signal import convolve2d
 from PIL import Image
-from skimage import io, exposure
+from skimage import exposure
 from pathlib import Path
-from assemble_metadata import IMG_PATH, OBJ_ID, BACKGROUND, IMG_VIEW, IMG_TRANSFORM
+from assemble_metadata import (
+    IMG_PATH,
+    OBJ_ID,
+    BACKGROUND,
+    IMG_VIEW,
+    IMG_TRANSFORM,
+    CLASS_NAME,
+)
+from scipy.ndimage import label
 import pandas as pd
 import cv2 as cv
 import numpy as np
 import os, time
+import matplotlib.pyplot as plt
 
 THRESHOLDEN_IMG = "thresholden_image"
 DETECTED_OBJECTS = "detected_objects"
 ELAPSED_TIME = "elapsed_time"
+BLOCK_SIZE = "block_size"
 
 
 class ImageTheresholder:
@@ -29,36 +39,107 @@ class ImageTheresholder:
         methods = []
         detected_objects = []
         elapsed_times = []
+        block_sizes = []
+        classes = []
         methods_unique = [
             "mean_of_neighbourhood",
             "gaussian_weighted_sum_of_neighbourhood",
+            "otsu",
         ]
+        processor = ImageProcessor()
         for method_name in methods_unique:
-            for path in df[IMG_PATH].values:
+            for _, row in df.iterrows():
+                path = row[IMG_PATH]
+                invert = row[BACKGROUND] == "light"
+                img_class = row[CLASS_NAME]
+                thresh_method = method_name
+                input_name = Path(str(row[IMG_PATH])).name
+                output_name = Path(thresh_method + "_" + input_name)
+                dir = Path(method_name + "_segmented_dataset") / img_class
+                if not os.path.exists(dir):
+                    os.makedirs(dir)
+                output_name = dir / output_name
                 print(f"Thresholding image {path} with the method {method_name}")
                 img = cv.imread(path, cv.IMREAD_GRAYSCALE)
-                thresholden_img, elapsed_time = ImageTheresholder.apply_thresholding(
-                    img, method_name
+                if row[IMG_TRANSFORM] != "mean_filter":
+                    img = processor.mean_filter(img_path=path, kernel_size=2)
+                    img = np.array(img, dtype="uint8")
+                (
+                    thresholden_img,
+                    elapsed_time,
+                    block_size,
+                    obj_count,
+                ) = ImageTheresholder.apply_thresholding(
+                    img, method_name, invert=invert
                 )
-                # obj_count = ImageTheresholder.count_objects(thresholden_img)
+
+                thresholden_img = Image.fromarray(thresholden_img.astype("uint8"), "L")
+                thresholden_img.save(output_name)
+
+                classes.append(Path(path).parent.name)
                 paths.append(path)
                 thresholded_imgs.append(thresholden_img)
                 methods.append(method_name)
-                detected_objects.append(0)
+                detected_objects.append(obj_count)
                 elapsed_times.append(elapsed_time)
+                block_sizes.append(block_size)
 
-        return pd.DataFrame(
+        df = pd.DataFrame(
             {
-                IMG_PATH: thresholded_imgs,
+                IMG_PATH: paths,
                 IMG_TRANSFORM: methods,
+                CLASS_NAME: classes,
                 THRESHOLDEN_IMG: thresholded_imgs,
                 DETECTED_OBJECTS: detected_objects,
                 ELAPSED_TIME: elapsed_times,
+                BLOCK_SIZE: block_sizes,
             }
         )
+        return df
+
+    def _apply_otsu_threshold(img, method) -> int:
+        """Applies a thresholding method to an image calculating the optimal
+        block size for the method. As each image has only one object, the optimal
+        block size is the smallest one that produces a binary image with only one
+        object count.
+        Args:
+            img(PIL.Image): A PIL Image object.
+        Returns:
+            block_size(int): The optimal block size for the adaptive thresholding
+                methods.
+        """
+        start = time.perf_counter()
+        img = np.array(img)
+        out = cv.threshold(img, 0, 255, method)[1]
+        _, n_objects = label(out)
+        block_size = 3
+        end = time.perf_counter()
+        time_count = end - start
+        return block_size, out, n_objects, time_count
+
+    def _apply_adaptive_threshold(img, method, invert) -> tuple:
+        """Applies a thresholding method to an image calculating the optimal
+        block size for the method. As each image has only one object, the optimal
+        block size is the smallest one that produces a binary image with only one
+        object count.
+        Args:
+            img(PIL.Image): A PIL Image object.
+        Returns:
+            block_size(int): The optimal block size for the adaptive thresholding
+                methods.
+        """
+        start = time.perf_counter()
+        img = np.array(img)
+        plt.imshow(img)
+        block_size = 3
+        out = cv.adaptiveThreshold(img, 255, method, invert, block_size, 23, 2)
+        _, n_objects = label(out)
+        end = time.perf_counter()
+        time_count = end - start
+        return block_size, out, n_objects, time_count
 
     # TODO: add type hints for imgs
-    def apply_thresholding(img, method: str):
+    def apply_thresholding(img, method: str, invert: bool = False) -> tuple:
         """Applies a thresholding method to an image.
         Args:
             img(PIL.Image): A PIL Image object.
@@ -68,23 +149,46 @@ class ImageTheresholder:
                 image.
         """
 
-        if method == "mean_of_neighbourhood":
-            method = cv.ADAPTIVE_THRESH_MEAN_C
-        elif method == "gaussian_weighted_sum_of_neighbourhood":
-            method = cv.ADAPTIVE_THRESH_GAUSSIAN_C
+        if method != "otsu":
+            if method == "mean_of_neighbourhood":
+                method = cv.ADAPTIVE_THRESH_MEAN_C
+            elif method == "gaussian_weighted_sum_of_neighbourhood":
+                method = cv.ADAPTIVE_THRESH_GAUSSIAN_C
+            if invert:
+                invert = cv.THRESH_BINARY_INV
+            else:
+                invert = cv.THRESH_BINARY
+
+            (
+                block_size,
+                out,
+                n_objects,
+                time_count,
+            ) = ImageTheresholder._apply_adaptive_threshold(img, method, invert)
+        elif method == "otsu":
+            if invert:
+                method = cv.THRESH_BINARY_INV + cv.THRESH_OTSU
+            else:
+                method = cv.THRESH_BINARY + cv.THRESH_OTSU
+
+            (
+                block_size,
+                out,
+                n_objects,
+                time_count,
+            ) = ImageTheresholder._apply_otsu_threshold(img, method)
+
         else:
             raise ValueError("Invalid method name")
 
-        start = time.perf_counter()
-        out = cv.adaptiveThreshold(img, 255, method, cv.THRESH_BINARY, 11, 2)
-        end = time.perf_counter()
-
-        return out, end - start
+        return out, time_count, block_size, n_objects
 
 
 class ImageProcessor:
     def __init__(
-        self, base_path: str, metadata_path: str = "full_dataset_metadata.csv"
+        self,
+        base_path: str = "full_dataset",
+        metadata_path: str = "full_dataset_metadata.csv",
     ):
         self.base_path = Path(base_path)
         self.metadata_df = pd.read_csv(Path(metadata_path))
@@ -101,7 +205,9 @@ class ImageProcessor:
 
         return img
 
-    def mean_filter(self, img_path: str, kernel_size: int = 30) -> Image:
+    def mean_filter(
+        self, img_path: str = None, kernel_size: int = 30, img=None
+    ) -> Image:
         """Applies the mean filter to the image using a convolution operation.
         Args:
            img_path(str): the file path to the image to be filtered located in
@@ -112,7 +218,8 @@ class ImageProcessor:
             convolved(Image): A PIL Image object representing the result of the
                 convolution self.img * kernel(kernel_size)"""
 
-        img = Image.open(img_path)
+        if img_path != None:
+            img = Image.open(img_path)
         if kernel_size == 0 or type(kernel_size) != int:
             raise ValueError("Kernel size must be a positive integer")
         shape = (kernel_size, kernel_size)
@@ -236,4 +343,4 @@ if __name__ == "__main__":
         filter=img_processor.histogram_normalization, output_dir="normalized_dataset"
     )"""
     df = pd.read_csv("full_dataset_metadata.csv")
-    ImageTheresholder.apply_adaptive_methods(df)
+    segmented = ImageTheresholder.apply_adaptive_methods(df)

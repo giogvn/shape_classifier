@@ -13,6 +13,7 @@ IMG_PATH = "img_path"
 IMG_VIEW = "img_view"
 IMG_TRANSFORM = "img_transformation"
 INDOOR = "indoor"
+THRESHOLD_METHOD = "thresh_method"
 
 METADATA_HEADER = [
     CLASS_NAME,
@@ -23,6 +24,7 @@ METADATA_HEADER = [
     IMG_VIEW,
     IMG_TRANSFORM,
     INDOOR,
+    THRESHOLD_METHOD,
 ]
 ACCEPTED_IMG_VIEWS = [
     "front",
@@ -41,6 +43,11 @@ ACCEPTED_IMG_TRANSFORATIONS = [
     "log",
     "mean_filter",
     "histogram_equalization",
+]
+
+ACCEPTED_IMG_THRESH = [
+    "otsu_bin",
+    "ground_truth",
 ]
 INDOOR = True
 ACCEPTED_IMG_BACKGROUNDS = ["dark", "light"]
@@ -102,15 +109,17 @@ def get_image_creation_date(img_path: Path) -> str:
         return creation_date
 
 
-def get_img_metadata(img_path_name: str) -> tuple[str, str, str, str, str, bool]:
+def get_img_metadata(
+    img_path_name: str,
+) -> tuple[str, str, str, str, str, bool]:
     """Returns the metadata of an image.
     Args:
         img_path_name (str): the img file name.
 
     Returns:
-        tuple[str, str, str, str, str, bool]: A tuple containing the image's
-        object id, image view, image transformation background and indoor
-        information of an image.
+        tuple[str, str, str, str, str, bool,str]: A tuple containing the image's
+        object id, image view, image transformation background, indoor
+        information of an image and the name of its thresholding method (if binary).
 
     Raises:
         InvalidImageNameError: if the img_path name does not have the expected format:
@@ -141,7 +150,6 @@ def get_img_metadata(img_path_name: str) -> tuple[str, str, str, str, str, bool]
         if transform in metadata[1]:
             img_transform = transform
             break
-
     if not img_view:
         raise InvalidImageNameError(INVALID_IMG_NAME_ERROR)
 
@@ -149,7 +157,10 @@ def get_img_metadata(img_path_name: str) -> tuple[str, str, str, str, str, bool]
 
 
 def assemble_metadata(
-    base_path: Path, out: Path = "metadata.csv", header: list[str] = METADATA_HEADER
+    base_path: Path,
+    out: Path = "metadata.csv",
+    header: list[str] = METADATA_HEADER,
+    segmentation_method: str = "original",
 ) -> None:
     """
     Assembles metadata.csv file from the images from which path's are rooted in
@@ -181,7 +192,7 @@ def assemble_metadata(
         base_path/
         ├── img1.png
         ├── img2.jpg
-        └──  img3.jpg
+        └── img3.jpg
     """
 
     data = {attr: [] for attr in header}
@@ -208,6 +219,7 @@ def assemble_metadata(
                     data["img_view"].append(img_view)
                     data["img_transformation"].append(img_transform)
                     data["indoor"].append(indoor)
+                    data["thresh_method"].append(segmentation_method)
 
     if not found_img:
         raise InvalidDirectoryStructureError(
@@ -219,4 +231,9 @@ def assemble_metadata(
 
 
 if __name__ == "__main__":
-    assemble_metadata(Path("full_dataset"), out="full_dataset_metadata.csv")
+    segmentation_method = "otsu_bin"
+    assemble_metadata(
+        Path("automatic_segmented_dataset"),
+        out="otsu_segmented_dataset_metadata.csv",
+        segmentation_method=segmentation_method,
+    )
